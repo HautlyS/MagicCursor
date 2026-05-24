@@ -39,9 +39,8 @@ jobs:
           - browser: opera
             os: ubuntu-latest
             artifact: extension/opera.crx
-          - browser: safari
-            os: macos-latest
-            artifact: extension/safari.zip
+
+    # Safari is built separately with xcode on macOS
 
     steps:
       - name: Checkout
@@ -61,24 +60,7 @@ jobs:
           NODE_ENV: production
           TARGET_BROWSER: ${{ matrix.browser }}
 
-      - name: Upload Safari artifact
-        if: matrix.browser == 'safari'
-        run: |
-          cd extension/safari
-          mkdir -p _locales images
-          cp ../../safari/manifest.json .
-          zip -r safari-extension.zip safari/
-        shell: bash
-
-      - name: Upload Safari package
-        if: matrix.browser == 'safari'
-        uses: actions/upload-artifact@v4
-        with:
-          name: extension-safari
-          path: extension/safari-extension.zip
-
       - name: Upload artifact
-        if: matrix.browser != 'safari'
         uses: actions/upload-artifact@v4
         with:
           name: extension-${{ matrix.browser }}
