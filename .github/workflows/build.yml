@@ -153,6 +153,31 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Upload Linux artifacts
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-${{ matrix.platform }}
+          path: |
+            src-tauri/target/release/bundle/deb/**/*.deb
+            src-tauri/target/release/bundle/rpm/**/*.rpm
+
+      - name: Upload macOS artifact
+        if: matrix.platform == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-${{ matrix.platform }}
+          path: src-tauri/target/release/bundle/dmg/**/*.dmg
+
+      - name: Upload Windows artifact
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-${{ matrix.platform }}
+          path: |
+            src-tauri/target/release/bundle/nsis/**/*.exe
+            src-tauri/target/release/bundle/msi/**/*.msi
+
   # Build Vue desktop preview
   build-vue-preview:
     name: Build Vue Preview
