@@ -79,12 +79,14 @@ jobs:
         if: matrix.browser == 'safari'
         run: |
           mkdir -p extension/safari-extension
-          cd extension
-          if [ -d "safari" ]; then
-            cp -r safari extension/safari-extension/
+          if [ -d "extension/safari" ]; then
+            cp -r extension/safari/* extension/safari-extension/
           fi
+          cd extension
           zip -r safari-extension.zip safari-extension
-        shell: bash
+          cd ..
+          echo "Safari build artifacts:"
+          ls -la extension/safari-extension/
 
       - name: Upload Safari package
         if: matrix.browser == 'safari'
@@ -285,6 +287,7 @@ jobs:
           npm run build:chrome
           npm run build:firefox
           npm run build:opera
+          npm run build:safari
 
       - name: Verify extension builds
         run: |

@@ -4,7 +4,6 @@
   "version": "1.0.0",
   "identifier": "com.magiccursor.app",
   "build": {
-    "devtools": true,
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
     "devUrl": "http://localhost:5173",
