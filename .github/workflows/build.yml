@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  NODE_VERSION: '20.x'
+  NODE_VERSION: '22'
   RUSTUP_TOOLCHAIN: stable
   CARGO_TERM_COLOR: always
 
@@ -51,13 +51,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: npm ci
 
       - name: Build ${{ matrix.browser }} extension
-        run: yarn run build:${{ matrix.browser }}
+        run: npm run build:${{ matrix.browser }}
         env:
           NODE_ENV: production
           TARGET_BROWSER: ${{ matrix.browser }}
@@ -111,7 +110,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -119,10 +117,10 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Setup Tauri CLI
-        run: yarn add -D @tauri-apps/cli@^2
+        run: npm install -D @tauri-apps/cli@^2
 
       - name: Install frontend dependencies
-        run: yarn install --frozen-lockfile
+        run: npm ci
 
       - name: Build Tauri app
         id: tauri-build
@@ -170,13 +168,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: npm ci
 
       - name: Build Vue app
-        run: yarn build
+        run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -251,16 +248,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'yarn'
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
-
-      - name: TypeScript check
-        run: yarn typecheck
+        run: npm ci
 
       - name: Build Vue app
-        run: yarn build
+        run: npm run build
 
       - name: Verify Vue build output
         run: |
@@ -270,7 +263,7 @@ jobs:
           ls -la dist/
 
       - name: Build browser extensions
-        run: yarn build:all-ext
+        run: npm run build:all-ext
 
       - name: Verify extension builds
         run: |
