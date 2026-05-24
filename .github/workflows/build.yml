@@ -53,16 +53,24 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      - name: Cache node_modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --prefer-offline
 
       - name: Build ${{ matrix.browser }} extension
         run: |
+          echo "Building for ${{ matrix.browser }}"
           if [ "${{ matrix.browser }}" = "safari" ]; then
-            npm run build:safari
+            npm run build:safari 2>&1
           else
-            npm run build:${{ matrix.browser }}
+            npm run build:${{ matrix.browser }} 2>&1
           fi
+          echo "Build exit code: $?"
         env:
           NODE_ENV: production
           TARGET_BROWSER: ${{ matrix.browser }}
@@ -128,11 +136,11 @@ jobs:
         run: npm ci
 
       - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+        run: |
+          npm install -g @tauri-apps/cli@^2
+          npx tauri build --target ${{ matrix.target }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          args: --target ${{ matrix.target }}
 
       - name: Upload Windows artifact
         if: matrix.platform == 'windows'
