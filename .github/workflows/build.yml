@@ -20,7 +20,9 @@ env:
   NODE_VERSION: '22'
   RUSTUP_TOOLCHAIN: stable
   CARGO_TERM_COLOR: always
-  FORCE_JUST_JAVASCRIPT: true
+  FORCE_JUST_JAVASCRIPT: 'true'
+  FORCE_JUST_JAVASCRIPT_REASON: 'Tauri CLI handles Rust setup'
+  ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: 'true'
 
 jobs:
   # Build browser extensions
@@ -129,6 +131,8 @@ jobs:
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ env.RUSTUP_TOOLCHAIN }}
 
       - name: Install frontend dependencies
         run: npm ci
@@ -137,11 +141,11 @@ jobs:
         run: npm run build
 
       - name: Build Tauri app
-        uses: tauri-apps/tauri-action@v0
+        run: |
+          npm install @tauri-apps/cli@2
+          npx tauri build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
   # Build Vue desktop preview
   build-vue-preview:
