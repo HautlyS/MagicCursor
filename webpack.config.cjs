@@ -85,24 +85,16 @@ module.exports = {
 
   module: {
     rules: [
-      // Skip wext-manifest-loader for Safari - copy manifest directly
+      // Manifest loader for browser extensions
       {
         type: 'javascript/auto',
         test: /manifest\.json$/,
-        use: [
-          {
-            loader: 'wext-manifest-loader',
-            options: {
-              usePackageJSONVersion: true,
-            },
+        use: {
+          loader: 'wext-manifest-loader',
+          options: {
+            usePackageJSONVersion: true,
           },
-          {
-            loader: 'file-loader',
-            options: {
-              name: 'manifest.json',
-            },
-          },
-        ],
+        },
         exclude: /node_modules/,
       },
       {
