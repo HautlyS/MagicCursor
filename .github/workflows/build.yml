@@ -134,37 +134,9 @@ jobs:
         run: npm run build
 
       - name: Build Tauri app
-        run: |
-          npm install @tauri-apps/cli@^2
-          npx tauri build
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          RUST_BACKTRACE: 1
-
-      - name: Upload Windows artifact
-        if: matrix.platform == 'windows'
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-${{ matrix.platform }}
-          path: |
-            src-tauri/target/release/bundle/**/*.exe
-            src-tauri/target/release/bundle/**/*.msi
-
-      - name: Upload macOS artifact
-        if: matrix.platform == 'macos'
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-${{ matrix.platform }}
-          path: src-tauri/target/release/bundle/**/*.app
-
-      - name: Upload Linux artifact
-        if: matrix.platform == 'linux'
-        uses: actions/upload-artifact@v4
-        with:
-          name: tauri-${{ matrix.platform }}
-          path: |
-            src-tauri/target/release/bundle/**/*.AppImage
-            src-tauri/target/release/bundle/**/*.deb
 
   # Build Vue desktop preview
   build-vue-preview:
