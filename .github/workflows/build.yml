@@ -133,17 +133,27 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+          toolchain: stable
+
+      - name: Verify Rust installation
+        run: |
+          rustc --version
+          cargo --version
+          rustup target list --installed
 
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Build Vue frontend
+        run: npm run build
+
       - name: Build Tauri app
         run: |
           npm install @tauri-apps/cli@^2
-          npm run build
-          npx tauri build --target ${{ matrix.target }}
+          npx tauri build --target ${{ matrix.target }} --verbose
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUST_BACKTRACE: 1
 
       - name: Upload Windows artifact
         if: matrix.platform == 'windows'
