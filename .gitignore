@@ -202,3 +202,24 @@ dist/
 !.yarn/releases
 !.yarn/plugins
 .pnp.*
+
+### Tauri ###
+src-tauri/target/
+src-tauri/src-tauri.d.ts
+src-tauri/Cargo.lock
+src-tauri/bundle/
+
+# Rust build artifacts
+**/*.rs.bk
+*.pdb
+
+# macOS
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini

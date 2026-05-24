@@ -1,34 +1,48 @@
 {
-	"extends": [
-		"@abhijithvijayan/eslint-config/typescript",
-		"@abhijithvijayan/eslint-config/node",
-		"@abhijithvijayan/eslint-config/react"
-	],
-	"parserOptions": {
-		"project": [
-			"./tsconfig.json"
-		],
-		"sourceType": "module"
-	},
-	"rules": {
-		"no-console": "off",
-		"no-extend-native": "off",
-		"react/jsx-props-no-spreading": "off",
-		"jsx-a11y/label-has-associated-control": "off",
-		"class-methods-use-this": "off",
-		"max-classes-per-file": "off",
-		"node/no-missing-import": "off",
-		"node/no-unpublished-import": "off",
-		"node/no-unsupported-features/es-syntax": ["error", {
-			"ignores": ["modules"]
-		}]
-	},
-	"env": {
-		"webextensions": true
-	},
-	"settings": {
-		"node": {
-			"tryExtensions": [".tsx"] // append tsx to the list as well
-		}
-	}
+  "root": true,
+  "env": {
+    "browser": true,
+    "es2022": true,
+    "webextensions": true,
+    "node": true
+  },
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:vue/vue3-recommended",
+    "prettier"
+  ],
+  "parser": "vue-eslint-parser",
+  "parserOptions": {
+    "parser": "@typescript-eslint/parser",
+    "sourceType": "module",
+    "ecmaVersion": 2022
+  },
+  "plugins": [
+    "@typescript-eslint",
+    "vue"
+  ],
+  "rules": {
+    "no-console": "warn",
+    "no-debugger": "warn",
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": "warn",
+    "@typescript-eslint/no-explicit-any": "off",
+    "vue/no-v-html": "off",
+    "vue/multi-word-component-names": "off",
+    "vue/require-default-prop": "off",
+    "vue/require-explicit-emits": "off",
+    "max-classes-per-file": "off"
+  },
+  "settings": {
+    "vue": {
+      "parser": "vue-eslint-parser"
+    }
+  },
+  "ignorePatterns": [
+    "dist/**",
+    "extension/**",
+    "node_modules/**",
+    "src-tauri/**"
+  ]
 }

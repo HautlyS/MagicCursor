@@ -5,7 +5,9 @@ import {
   saveSettings,
   DEFAULT_SETTINGS,
   CursorSettings,
+  EFFECT_NAMES,
 } from "../utils/storage";
+import { EffectType, EFFECT_CONFIG, ALL_EFFECTS } from "../ContentScript/effects/types";
 
 import "./styles.scss";
 
@@ -14,8 +16,7 @@ function openWebPage(url: string): Promise<Tabs.Tab> {
 }
 
 const Popup: React.FC = () => {
-  const [settings, setSettings] =
-    React.useState<CursorSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = React.useState<CursorSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = React.useState(true);
   const [showSettings, setShowSettings] = React.useState(false);
   const [saved, setSaved] = React.useState(false);
@@ -27,10 +28,7 @@ const Popup: React.FC = () => {
     });
   }, []);
 
-  const handleChange = (
-    key: keyof CursorSettings,
-    value: number | boolean
-  ): void => {
+  const handleChange = (key: keyof CursorSettings, value: number | boolean | string): void => {
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
     saveSettings(newSettings).then(() => {
@@ -53,7 +51,10 @@ const Popup: React.FC = () => {
   if (loading) {
     return (
       <section id="popup">
-        <div className="loading">Loading...</div>
+        <div className="loading">
+          <div className="loading-spinner"></div>
+          <span>Loading Magic Cursor...</span>
+        </div>
       </section>
     );
   }
@@ -61,8 +62,11 @@ const Popup: React.FC = () => {
   return (
     <section id="popup">
       <div className="header">
-        <h1>✨ Magic Cursor</h1>
-        <p>Fluid Mouse Trail</p>
+        <div className="logo">✨</div>
+        <div className="title-area">
+          <h1>Magic Cursor</h1>
+          <p>Beautiful cursor effects</p>
+        </div>
       </div>
 
       <div className="toggle-container">
@@ -72,21 +76,32 @@ const Popup: React.FC = () => {
             checked={settings.enabled}
             onChange={(e): void => handleChange("enabled", e.target.checked)}
           />
-          <span className="slider" />
+          <span className="slider"></span>
         </label>
         <span className="toggle-label">
-          {settings.enabled ? "Enabled" : "Disabled"}
+          {settings.enabled ? "Active" : "Inactive"}
         </span>
       </div>
 
-      <div className="status">
-        {settings.enabled ? (
-          <p className="status-enabled">
-            ✓ Magic Cursor is active on all websites
-          </p>
-        ) : (
-          <p className="status-disabled">Magic Cursor is currently disabled</p>
-        )}
+      <div className="effect-selector">
+        <h3>🎭 Choose Effect</h3>
+        <div className="effect-grid">
+          {ALL_EFFECTS.map((effect) => {
+            const config = EFFECT_CONFIG[effect];
+            return (
+              <button
+                key={effect}
+                type="button"
+                className={`effect-btn ${settings.effectType === effect ? 'active' : ''}`}
+                onClick={(): void => handleChange("effectType", effect)}
+                title={config.description}
+              >
+                <span className="effect-emoji">{config.emoji}</span>
+                <span className="effect-name">{config.name}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <button
@@ -94,103 +109,13 @@ const Popup: React.FC = () => {
         className="btn-settings-toggle"
         onClick={(): void => setShowSettings(!showSettings)}
       >
-        {showSettings ? "▲ Hide Settings" : "▼ Show Settings"}
+        {showSettings ? "▲ Hide Settings" : "▼ Quick Settings"}
       </button>
 
       {showSettings && (
         <div className="settings-panel">
           <div className="settings-section">
-            <h3>Visual Quality</h3>
-            <div className="setting-item">
-              <label>
-                <span>Simulation Quality</span>
-                <span className="value">{settings.simResolution}</span>
-              </label>
-              <input
-                type="range"
-                min="64"
-                max="256"
-                step="32"
-                value={settings.simResolution}
-                onChange={(e): void =>
-                  handleChange("simResolution", parseInt(e.target.value, 10))
-                }
-              />
-            </div>
-            <div className="setting-item">
-              <label>
-                <span>Color Detail</span>
-                <span className="value">{settings.dyeResolution}</span>
-              </label>
-              <input
-                type="range"
-                min="512"
-                max="2048"
-                step="128"
-                value={settings.dyeResolution}
-                onChange={(e): void =>
-                  handleChange("dyeResolution", parseInt(e.target.value, 10))
-                }
-              />
-            </div>
-          </div>
-
-          <div className="settings-section">
-            <h3>Fluid Behavior</h3>
-            <div className="setting-item">
-              <label>
-                <span>Swirl Strength</span>
-                <span className="value">{settings.curl}</span>
-              </label>
-              <input
-                type="range"
-                min="0"
-                max="30"
-                step="1"
-                value={settings.curl}
-                onChange={(e): void =>
-                  handleChange("curl", parseInt(e.target.value, 10))
-                }
-              />
-            </div>
-            <div className="setting-item">
-              <label>
-                <span>Fade Speed</span>
-                <span className="value">
-                  {settings.densityDissipation.toFixed(1)}
-                </span>
-              </label>
-              <input
-                type="range"
-                min="0.5"
-                max="8"
-                step="0.5"
-                value={settings.densityDissipation}
-                onChange={(e): void =>
-                  handleChange("densityDissipation", parseFloat(e.target.value))
-                }
-              />
-            </div>
-          </div>
-
-          <div className="settings-section">
-            <h3>Mouse Trail</h3>
-            <div className="setting-item">
-              <label>
-                <span>Trail Strength</span>
-                <span className="value">{settings.splatForce}</span>
-              </label>
-              <input
-                type="range"
-                min="2000"
-                max="12000"
-                step="500"
-                value={settings.splatForce}
-                onChange={(e): void =>
-                  handleChange("splatForce", parseInt(e.target.value, 10))
-                }
-              />
-            </div>
+            <h3>⚡ Quick Adjust</h3>
             <div className="setting-item">
               <label>
                 <span>Trail Size</span>
@@ -209,60 +134,28 @@ const Popup: React.FC = () => {
             </div>
             <div className="setting-item">
               <label>
-                <span>Color Speed</span>
-                <span className="value">{settings.colorUpdateSpeed}</span>
+                <span>Trail Strength</span>
+                <span className="value">{settings.splatForce}</span>
               </label>
               <input
                 type="range"
-                min="1"
-                max="30"
-                step="1"
-                value={settings.colorUpdateSpeed}
+                min="2000"
+                max="12000"
+                step="500"
+                value={settings.splatForce}
                 onChange={(e): void =>
-                  handleChange("colorUpdateSpeed", parseInt(e.target.value, 10))
+                  handleChange("splatForce", parseInt(e.target.value, 10))
                 }
               />
             </div>
           </div>
 
-          <div className="settings-section">
-            <h3>Effects</h3>
-            <div className="setting-item checkbox">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={settings.shading}
-                  onChange={(e): void =>
-                    handleChange("shading", e.target.checked)
-                  }
-                />
-                <span>3D Shading</span>
-              </label>
-            </div>
-            <div className="setting-item checkbox">
-              <label>
-                <input
-                  type="checkbox"
-                  checked={settings.transparent}
-                  onChange={(e): void =>
-                    handleChange("transparent", e.target.checked)
-                  }
-                />
-                <span>Transparent Background</span>
-              </label>
-            </div>
-          </div>
-
           <div className="settings-actions">
             <button type="button" className="btn-reset" onClick={handleReset}>
-              Reset Defaults
+              🔄 Reset
             </button>
-            <button
-              type="button"
-              className="btn-advanced"
-              onClick={openOptions}
-            >
-              Advanced Settings
+            <button type="button" className="btn-advanced" onClick={openOptions}>
+              🎛️ Advanced
             </button>
           </div>
 
@@ -271,12 +164,8 @@ const Popup: React.FC = () => {
       )}
 
       <div className="footer">
-        <a
-          href="https://github.com/magic-cursor/magic-cursor"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          GitHub
+        <a href="https://github.com/magic-cursor/magic-cursor" target="_blank" rel="noopener noreferrer">
+          🌟 Star on GitHub
         </a>
       </div>
     </section>

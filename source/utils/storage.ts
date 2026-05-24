@@ -1,7 +1,21 @@
 import {browser} from 'webextension-polyfill-ts';
 
+export type EffectType = 
+  | 'fluid'      // Default fluid simulation
+  | 'stars'      // Starry particles
+  | 'sparkles'   // Sparkle burst
+  | 'bubbles'    // Bubble float
+  | 'hearts'     // Floating hearts
+  | 'fireflies'  // Glowing fireflies
+  | 'rainbow'    // Rainbow trail
+  | 'neon'       // Neon glow
+  | 'glitch'     // Glitch effect
+  | 'cute'       // Kawaii cute effect
+  | 'anime';     // Anime style effect
+
 export interface CursorSettings {
   enabled: boolean;
+  effectType: EffectType;
   simResolution: number;
   dyeResolution: number;
   densityDissipation: number;
@@ -16,8 +30,23 @@ export interface CursorSettings {
   transparent: boolean;
 }
 
+export const EFFECT_NAMES: Record<EffectType, string> = {
+  fluid: '🎨 Fluid',
+  stars: '⭐ Stars',
+  sparkles: '✨ Sparkles',
+  bubbles: '🫧 Bubbles',
+  hearts: '💖 Hearts',
+  fireflies: '✨ Fireflies',
+  rainbow: '🌈 Rainbow',
+  neon: '💜 Neon Glow',
+  glitch: '🔮 Glitch',
+  cute: '🌸 Cute',
+  anime: '💫 Anime',
+};
+
 export const DEFAULT_SETTINGS: CursorSettings = {
   enabled: true,
+  effectType: 'fluid',
   simResolution: 128,
   dyeResolution: 1024,
   densityDissipation: 3.5,

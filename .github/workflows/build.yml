@@ -1,0 +1,283 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '20.x'
+  RUSTUP_TOOLCHAIN: stable
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # Build browser extensions
+  build-extensions:
+    name: Build Browser Extensions (${{ matrix.browser }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - browser: chrome
+            os: ubuntu-latest
+            artifact: extension/chrome.zip
+          - browser: firefox
+            os: ubuntu-latest
+            artifact: extension/firefox.xpi
+          - browser: opera
+            os: ubuntu-latest
+            artifact: extension/opera.crx
+          - browser: safari
+            os: macos-latest
+            artifact: extension/safari.zip
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build ${{ matrix.browser }} extension
+        run: yarn run build:${{ matrix.browser }}
+        env:
+          NODE_ENV: production
+          TARGET_BROWSER: ${{ matrix.browser }}
+
+      - name: Upload Safari artifact
+        if: matrix.browser == 'safari'
+        run: |
+          cd extension/safari
+          mkdir -p _locales images
+          cp ../../safari/manifest.json .
+          zip -r safari-extension.zip safari/
+        shell: bash
+
+      - name: Upload Safari package
+        if: matrix.browser == 'safari'
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-safari
+          path: extension/safari-extension.zip
+
+      - name: Upload artifact
+        if: matrix.browser != 'safari'
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-${{ matrix.browser }}
+          path: ${{ matrix.artifact }}
+
+  # Build Tauri desktop app
+  build-tauri:
+    name: Build Desktop App (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos
+            runner: macos-latest
+            target: aarch64-apple-darwin
+          - platform: windows
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+          - platform: linux
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Setup Tauri CLI
+        run: yarn add -D @tauri-apps/cli@^2
+
+      - name: Install frontend dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build Tauri app
+        id: tauri-build
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: --target ${{ matrix.target }}
+
+      - name: Upload Windows artifact
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-${{ matrix.platform }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
+
+      - name: Upload macOS artifact
+        if: matrix.platform == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-${{ matrix.platform }}
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/**/*.app
+
+      - name: Upload Linux artifact
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-${{ matrix.platform }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
+
+  # Build Vue desktop preview
+  build-vue-preview:
+    name: Build Vue Preview
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build Vue app
+        run: yarn build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vue-preview
+          path: dist
+          retention-days: 7
+
+  # Create release
+  release:
+    needs: [build-extensions, build-tauri, build-vue-preview]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: extension-*
+          merge-multiple: true
+
+      - name: Download Tauri artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/tauri
+          pattern: tauri-*
+          merge-multiple: true
+
+      - name: Download Vue preview
+        uses: actions/download-artifact@v4
+        with:
+          name: vue-preview
+          path: artifacts/vue
+
+      - name: Prepare release
+        run: |
+          mkdir -p release
+          shopt -s nullglob
+          for f in artifacts/extension-*.zip artifacts/extension-*.xpi artifacts/extension-*.crx; do
+            [ -f "$f" ] && cp "$f" release/
+          done
+          find artifacts/tauri -type f \( -name "*.exe" -o -name "*.app" -o -name "*.AppImage" -o -name "*.dmg" \) -exec cp {} release/ \;
+          echo "Release files:"
+          ls -la release/
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+          files: release/*
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Run tests and verification
+  test:
+    name: Test & Verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: TypeScript check
+        run: yarn typecheck
+
+      - name: Build Vue app
+        run: yarn build
+
+      - name: Verify Vue build output
+        run: |
+          echo "Checking Vue build..."
+          test -f dist/index.html && echo "✓ index.html exists"
+          test -d dist/assets && echo "✓ assets directory exists"
+          ls -la dist/
+
+      - name: Build browser extensions
+        run: yarn build:all-ext
+
+      - name: Verify extension builds
+        run: |
+          echo "Checking extension builds..."
+          for ext in chrome firefox opera safari; do
+            if [ -d "extension/$ext" ]; then
+              echo "✓ $ext extension built"
+              ls extension/$ext/
+            fi
+          done

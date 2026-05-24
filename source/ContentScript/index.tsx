@@ -1,7 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
 import SplashCursor from './magic-mouse';
-import {getSettings, onSettingsChanged, CursorSettings} from '../utils/storage';
+import ParticleEffect from './effects/ParticleEffect';
+import { getSettings, onSettingsChanged, CursorSettings, EFFECT_NAMES } from '../utils/storage';
+import { EffectType, EFFECT_CONFIG, ALL_EFFECTS } from './effects/types';
 
 (async function init(): Promise<void> {
   // Load settings
@@ -19,9 +21,34 @@ import {getSettings, onSettingsChanged, CursorSettings} from '../utils/storage';
     document.body.appendChild(container);
   }
 
-  // Render function
+  // Current effect ref for quick access
+  let currentEffectType: EffectType = settings.effectType || 'fluid';
+  let isEnabled = settings.enabled;
+
+  // Render function with effect support
   const render = (currentSettings: CursorSettings): void => {
-    if (currentSettings.enabled) {
+    currentEffectType = currentSettings.effectType || 'fluid';
+    isEnabled = currentSettings.enabled;
+
+    if (!currentSettings.enabled) {
+      ReactDOM.render(<></>, container!);
+      return;
+    }
+
+    // Use particle effects for non-fluid effects
+    if (currentEffectType !== 'fluid') {
+      const effectConfig = EFFECT_CONFIG[currentEffectType] || EFFECT_CONFIG.fluid;
+      ReactDOM.render(
+        <ParticleEffect
+          effectType={currentEffectType}
+          colorScheme={effectConfig.colorScheme}
+          splatRadius={currentSettings.splatRadius}
+          splatForce={currentSettings.splatForce}
+        />,
+        container
+      );
+    } else {
+      // Use WebGL fluid simulation for 'fluid' effect
       ReactDOM.render(
         <SplashCursor
           SIM_RESOLUTION={currentSettings.simResolution}
@@ -39,8 +66,6 @@ import {getSettings, onSettingsChanged, CursorSettings} from '../utils/storage';
         />,
         container
       );
-    } else {
-      ReactDOM.unmountComponentAtNode(container!);
     }
   };
 

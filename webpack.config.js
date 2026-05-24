@@ -42,6 +42,10 @@ const getExtensionFileType = (browser) => {
     return 'xpi';
   }
 
+  if (browser === 'safari') {
+    return 'zip';
+  }
+
   return 'zip';
 };
 
