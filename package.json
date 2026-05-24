@@ -28,7 +28,7 @@
     "build:chrome": "cross-env NODE_ENV=production cross-env TARGET_BROWSER=chrome webpack",
     "build:firefox": "cross-env NODE_ENV=production cross-env TARGET_BROWSER=firefox webpack",
     "build:opera": "cross-env NODE_ENV=production cross-env TARGET_BROWSER=opera webpack",
-    "build:safari": "cross-env NODE_ENV=production cross-env TARGET_BROWSER=safari webpack",
+    "build:safari": "cross-env NODE_ENV=production webpack --config webpack.safari.config.cjs",
     "build:all-ext": "npm run build:chrome && npm run build:firefox && npm run build:opera",
     "lint": "eslint . --ext .ts,.tsx,.vue",
     "lint:fix": "eslint . --ext .ts,.tsx,.vue --fix"

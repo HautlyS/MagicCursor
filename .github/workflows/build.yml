@@ -20,6 +20,7 @@ env:
   NODE_VERSION: '22'
   RUSTUP_TOOLCHAIN: stable
   CARGO_TERM_COLOR: always
+  FORCE_JUST_JAVASCRIPT: true
 
 jobs:
   # Build browser extensions
@@ -39,6 +40,9 @@ jobs:
           - browser: opera
             os: ubuntu-latest
             artifact: extension/opera.crx
+          - browser: safari
+            os: macos-latest
+            artifact: extension/safari.zip
 
     steps:
       - name: Checkout
@@ -53,16 +57,107 @@ jobs:
         run: npm ci
 
       - name: Build ${{ matrix.browser }} extension
-        run: npm run build:${{ matrix.browser }}
+        run: |
+          if [ "${{ matrix.browser }}" = "safari" ]; then
+            npm run build:safari
+          else
+            npm run build:${{ matrix.browser }}
+          fi
         env:
           NODE_ENV: production
           TARGET_BROWSER: ${{ matrix.browser }}
 
+      - name: Upload Safari artifact
+        if: matrix.browser == 'safari'
+        run: |
+          mkdir -p extension/safari-extension
+          cd extension
+          if [ -d "safari" ]; then
+            cp -r safari extension/safari-extension/
+          fi
+          zip -r safari-extension.zip safari-extension
+        shell: bash
+
+      - name: Upload Safari package
+        if: matrix.browser == 'safari'
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-safari
+          path: extension/safari-extension.zip
+
       - name: Upload artifact
+        if: matrix.browser != 'safari'
         uses: actions/upload-artifact@v4
         with:
           name: extension-${{ matrix.browser }}
           path: ${{ matrix.artifact }}
+
+  # Build Tauri desktop app
+  build-tauri:
+    name: Build Desktop App (${{ matrix.platform }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos
+            runner: macos-latest
+            target: aarch64-apple-darwin
+          - platform: windows
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+          - platform: linux
+            runner: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: --target ${{ matrix.target }}
+
+      - name: Upload Windows artifact
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-${{ matrix.platform }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.msi
+
+      - name: Upload macOS artifact
+        if: matrix.platform == 'macos'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-${{ matrix.platform }}
+          path: src-tauri/target/${{ matrix.target }}/release/bundle/**/*.app
+
+      - name: Upload Linux artifact
+        if: matrix.platform == 'linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-${{ matrix.platform }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.AppImage
+            src-tauri/target/${{ matrix.target }}/release/bundle/**/*.deb
 
   # Build Vue desktop preview
   build-vue-preview:
@@ -93,7 +188,7 @@ jobs:
 
   # Create release
   release:
-    needs: [build-extensions, build-vue-preview]
+    needs: [build-extensions, build-tauri, build-vue-preview]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
@@ -110,6 +205,19 @@ jobs:
           pattern: extension-*
           merge-multiple: true
 
+      - name: Download Safari artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: extension-safari
+          path: artifacts/safari
+
+      - name: Download Tauri artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/tauri
+          pattern: tauri-*
+          merge-multiple: true
+
       - name: Download Vue preview
         uses: actions/download-artifact@v4
         with:
@@ -123,6 +231,7 @@ jobs:
           for f in artifacts/extension-*.zip artifacts/extension-*.xpi artifacts/extension-*.crx; do
             [ -f "$f" ] && cp "$f" release/
           done
+          find artifacts/tauri -type f \( -name "*.exe" -o -name "*.app" -o -name "*.AppImage" -o -name "*.dmg" -o -name "*.msi" -o -name "*.deb" \) -exec cp {} release/ \;
           echo "Release files:"
           ls -la release/
 
@@ -164,7 +273,10 @@ jobs:
           ls -la dist/
 
       - name: Build browser extensions
-        run: npm run build:all-ext
+        run: |
+          npm run build:chrome
+          npm run build:firefox
+          npm run build:opera
 
       - name: Verify extension builds
         run: |
@@ -172,6 +284,5 @@ jobs:
           for ext in chrome firefox opera; do
             if [ -d "extension/$ext" ]; then
               echo "✓ $ext extension built"
-              ls extension/$ext/
             fi
           done
